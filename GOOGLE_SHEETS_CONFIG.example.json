@@ -1,0 +1,26 @@
+{
+  "budget_vs_achievement": {
+    "sheetId": "YOUR_GOOGLE_SHEET_ID_HERE",
+    "range": "Budget!A1:Z100"
+  },
+  "stock_180": {
+    "sheetId": "YOUR_GOOGLE_SHEET_ID_HERE",
+    "range": "Stock180!A1:Z200"
+  },
+  "ot_report": {
+    "sheetId": "YOUR_GOOGLE_SHEET_ID_HERE",
+    "range": "OT!A1:Z100"
+  },
+  "production_zippers": {
+    "sheetId": "YOUR_GOOGLE_SHEET_ID_HERE",
+    "range": "Zippers!A1:Z100"
+  },
+  "production_metal": {
+    "sheetId": "YOUR_GOOGLE_SHEET_ID_HERE",
+    "range": "Metal!A1:Z100"
+  },
+  "quality": {
+    "sheetId": "YOUR_GOOGLE_SHEET_ID_HERE",
+    "range": "Quality!A1:Z100"
+  }
+}
