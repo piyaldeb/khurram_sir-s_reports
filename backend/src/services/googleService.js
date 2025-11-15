@@ -17,6 +17,10 @@ class GoogleService {
 
   // Google Sheets methods
   async getSheetData(reportKey) {
+    // First check database for dynamic config
+    const SheetConfig = require('../models/SheetConfig');
+    const dbConfig = await SheetConfig.findOne({ reportKey, isActive: true });
+
     const cacheKey = `sheet_${reportKey}`;
     const cached = cache.get(cacheKey);
 
@@ -24,9 +28,19 @@ class GoogleService {
       return cached.data;
     }
 
-    const config = this.sheetsConfig[reportKey];
-    if (!config) {
-      throw new Error(`Report configuration not found for: ${reportKey}`);
+    let config;
+    if (dbConfig) {
+      // Use database config
+      config = {
+        sheetId: dbConfig.sheetId,
+        range: dbConfig.fullRange
+      };
+    } else {
+      // Fallback to environment config
+      config = this.sheetsConfig[reportKey];
+      if (!config) {
+        throw new Error(`Report configuration not found for: ${reportKey}`);
+      }
     }
 
     try {
@@ -46,6 +60,23 @@ class GoogleService {
       return data;
     } catch (error) {
       console.error(`Error fetching sheet data for ${reportKey}:`, error);
+      throw new Error(`Failed to fetch sheet data: ${error.message}`);
+    }
+  }
+
+  async getSheetDataByConfig(config) {
+    try {
+      const response = await this.sheets.spreadsheets.values.get({
+        spreadsheetId: config.sheetId,
+        range: config.range
+      });
+
+      const rows = response.data.values || [];
+      const data = this.normalizeSheetData(rows);
+
+      return data;
+    } catch (error) {
+      console.error('Error fetching sheet data:', error);
       throw new Error(`Failed to fetch sheet data: ${error.message}`);
     }
   }

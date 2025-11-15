@@ -1,15 +1,17 @@
 import { useState } from 'react';
 import { Layout } from '../components/Layout';
-import { Users, Folder, FileImage } from 'lucide-react';
+import { Users, Folder, FileImage, Sheet } from 'lucide-react';
 import { AdminSections } from '../components/AdminSections';
 import { AdminUsers } from '../components/AdminUsers';
 import { AdminUploads } from '../components/AdminUploads';
+import { AdminSheetConfig } from '../components/AdminSheetConfig';
 
 export const Admin = () => {
   const [activeTab, setActiveTab] = useState('sections');
 
   const tabs = [
     { id: 'sections', label: 'Sections', icon: Folder },
+    { id: 'sheetconfig', label: 'Sheet Config', icon: Sheet },
     { id: 'users', label: 'Users', icon: Users },
     { id: 'uploads', label: 'Uploads', icon: FileImage }
   ];
@@ -48,6 +50,7 @@ export const Admin = () => {
 
           <div className="p-6">
             {activeTab === 'sections' && <AdminSections />}
+            {activeTab === 'sheetconfig' && <AdminSheetConfig />}
             {activeTab === 'users' && <AdminUsers />}
             {activeTab === 'uploads' && <AdminUploads />}
           </div>

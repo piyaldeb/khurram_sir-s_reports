@@ -12,6 +12,7 @@ const reportsRoutes = require('./routes/reports');
 const uploadsRoutes = require('./routes/uploads');
 const sectionsRoutes = require('./routes/sections');
 const usersRoutes = require('./routes/users');
+const sheetConfigRoutes = require('./routes/sheetConfig');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -56,6 +57,7 @@ app.use('/api/reports', reportsRoutes);
 app.use('/api/uploads', uploadsRoutes);
 app.use('/api/sections', sectionsRoutes);
 app.use('/api/users', usersRoutes);
+app.use('/api/sheet-config', sheetConfigRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

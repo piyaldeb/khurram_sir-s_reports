@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const User = require('../src/models/User');
 const Section = require('../src/models/Section');
+const SheetConfig = require('../src/models/SheetConfig');
 
 async function bootstrapAdmin() {
   try {
@@ -69,6 +70,70 @@ async function bootstrapAdmin() {
 
       await Section.insertMany(defaultSections);
       console.log('Default sections created');
+    }
+
+    // Create default sheet configurations if none exist
+    const sheetConfigCount = await SheetConfig.countDocuments();
+    if (sheetConfigCount === 0) {
+      const defaultSheetConfigs = [
+        {
+          reportKey: 'budget_vs_achievement',
+          reportName: 'Monthly Budget vs Achievement',
+          sheetId: '1WIJOkAHouWkXVXhsa04dCvHkG6ESrqI91If7OkQbAXw',
+          sheetUrl: 'https://docs.google.com/spreadsheets/d/1WIJOkAHouWkXVXhsa04dCvHkG6ESrqI91If7OkQbAXw/',
+          tabName: 'Nov- Automation',
+          range: 'B:K50',
+          isActive: true
+        },
+        {
+          reportKey: 'stock_180',
+          reportName: '180 Days + Stock',
+          sheetId: '1j37Y6g3pnMWtwe2fjTe1JTT32aRLS0Z1YPjl3v657Cc',
+          sheetUrl: 'https://docs.google.com/spreadsheets/d/1j37Y6g3pnMWtwe2fjTe1JTT32aRLS0Z1YPjl3v657Cc/',
+          tabName: 'dashboard',
+          range: 'B2:B24',
+          isActive: true
+        },
+        {
+          reportKey: 'ot_report',
+          reportName: 'OT Report',
+          sheetId: '1SVGTDzzEPd2q9JgU_l9NI7PQVbf3bv5bCNvR8e2Oyho',
+          sheetUrl: 'https://docs.google.com/spreadsheets/d/1SVGTDzzEPd2q9JgU_l9NI7PQVbf3bv5bCNvR8e2Oyho/',
+          tabName: '26-Oct to 25-Nov',
+          range: 'B5:K50',
+          isActive: true
+        },
+        {
+          reportKey: 'production_zippers',
+          reportName: 'Production - Zippers',
+          sheetId: '1fnOSIWQa_mbfMHdgPatjYEIhG3kQlzPy0djHG8TOszk',
+          sheetUrl: 'https://docs.google.com/spreadsheets/d/1fnOSIWQa_mbfMHdgPatjYEIhG3kQlzPy0djHG8TOszk/',
+          tabName: 'Zipper',
+          range: 'A:H16',
+          isActive: true
+        },
+        {
+          reportKey: 'production_metal',
+          reportName: 'Production - Metal',
+          sheetId: '1fnOSIWQa_mbfMHdgPatjYEIhG3kQlzPy0djHG8TOszk',
+          sheetUrl: 'https://docs.google.com/spreadsheets/d/1fnOSIWQa_mbfMHdgPatjYEIhG3kQlzPy0djHG8TOszk/',
+          tabName: 'Metal',
+          range: 'A:H16',
+          isActive: true
+        },
+        {
+          reportKey: 'quality',
+          reportName: 'Quality Report',
+          sheetId: '1fnOSIWQa_mbfMHdgPatjYEIhG3kQlzPy0djHG8TOszk',
+          sheetUrl: 'https://docs.google.com/spreadsheets/d/1fnOSIWQa_mbfMHdgPatjYEIhG3kQlzPy0djHG8TOszk/',
+          tabName: 'Quality',
+          range: 'A:H16',
+          isActive: true
+        }
+      ];
+
+      await SheetConfig.insertMany(defaultSheetConfigs);
+      console.log('Default sheet configurations created');
     }
 
     console.log('\nBootstrap completed successfully!');
