@@ -125,34 +125,14 @@ export const Layout = ({ children }) => {
                     OT Report
                   </Link>
                   <Link
-                    to="/reports/production_zippers"
+                    to="/reports/standard_stock"
                     className={`block px-4 py-2 rounded-md text-sm ${
-                      isActive('/reports/production_zippers')
+                      isActive('/reports/standard_stock')
                         ? 'bg-blue-50 text-blue-700'
                         : 'text-gray-600 hover:bg-gray-100'
                     }`}
                   >
-                    Production - Zippers
-                  </Link>
-                  <Link
-                    to="/reports/production_metal"
-                    className={`block px-4 py-2 rounded-md text-sm ${
-                      isActive('/reports/production_metal')
-                        ? 'bg-blue-50 text-blue-700'
-                        : 'text-gray-600 hover:bg-gray-100'
-                    }`}
-                  >
-                    Production - Metal
-                  </Link>
-                  <Link
-                    to="/reports/quality"
-                    className={`block px-4 py-2 rounded-md text-sm ${
-                      isActive('/reports/quality')
-                        ? 'bg-blue-50 text-blue-700'
-                        : 'text-gray-600 hover:bg-gray-100'
-                    }`}
-                  >
-                    Quality
+                    Standard Item Stock
                   </Link>
                 </div>
               )}

@@ -8,9 +8,7 @@ exports.getReport = async (req, res) => {
       'budget_vs_achievement',
       'stock_180',
       'ot_report',
-      'production_zippers',
-      'production_metal',
-      'quality'
+      'standard_stock'
     ];
 
     if (!validReportKeys.includes(reportKey)) {
@@ -53,9 +51,7 @@ exports.getAllReportKeys = (req, res) => {
     { key: 'budget_vs_achievement', name: 'Monthly Budget vs Achievement' },
     { key: 'stock_180', name: '180 Days + Stock' },
     { key: 'ot_report', name: 'OT Report' },
-    { key: 'production_zippers', name: 'Production - Zippers' },
-    { key: 'production_metal', name: 'Production - Metal' },
-    { key: 'quality', name: 'Quality Report' }
+    { key: 'standard_stock', name: 'Standard Item Stock' }
   ];
 
   res.json({ reportKeys });

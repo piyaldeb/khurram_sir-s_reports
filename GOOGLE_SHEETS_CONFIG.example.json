@@ -1,14 +1,14 @@
 {
   "budget_vs_achievement": {
-    "sheetId": "YOUR_GOOGLE_SHEET_ID_HERE",
+    "sheetId": "https://docs.google.com/spreadsheets/d/1WIJOkAHouWkXVXhsa04dCvHkG6ESrqI91If7OkQbAXw/edit?gid=54672304#gid=54672304",
     "range": "Budget!A1:Z100"
   },
   "stock_180": {
-    "sheetId": "YOUR_GOOGLE_SHEET_ID_HERE",
+    "sheetId": "https://docs.google.com/spreadsheets/d/1j37Y6g3pnMWtwe2fjTe1JTT32aRLS0Z1YPjl3v657Cc/edit?gid=1125819248#gid=1125819248",
     "range": "Stock180!A1:Z200"
   },
   "ot_report": {
-    "sheetId": "YOUR_GOOGLE_SHEET_ID_HERE",
+    "sheetId": "https://docs.google.com/spreadsheets/d/1SVGTDzzEPd2q9JgU_l9NI7PQVbf3bv5bCNvR8e2Oyho/edit?gid=1629557200#gid=1629557200",
     "range": "OT!A1:Z100"
   },
   "production_zippers": {

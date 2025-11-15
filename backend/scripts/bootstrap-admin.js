@@ -104,30 +104,12 @@ async function bootstrapAdmin() {
           isActive: true
         },
         {
-          reportKey: 'production_zippers',
-          reportName: 'Production - Zippers',
+          reportKey: 'standard_stock',
+          reportName: 'Standard Item Stock',
           sheetId: '1fnOSIWQa_mbfMHdgPatjYEIhG3kQlzPy0djHG8TOszk',
           sheetUrl: 'https://docs.google.com/spreadsheets/d/1fnOSIWQa_mbfMHdgPatjYEIhG3kQlzPy0djHG8TOszk/',
-          tabName: 'Zipper',
-          range: 'A:H16',
-          isActive: true
-        },
-        {
-          reportKey: 'production_metal',
-          reportName: 'Production - Metal',
-          sheetId: '1fnOSIWQa_mbfMHdgPatjYEIhG3kQlzPy0djHG8TOszk',
-          sheetUrl: 'https://docs.google.com/spreadsheets/d/1fnOSIWQa_mbfMHdgPatjYEIhG3kQlzPy0djHG8TOszk/',
-          tabName: 'Metal',
-          range: 'A:H16',
-          isActive: true
-        },
-        {
-          reportKey: 'quality',
-          reportName: 'Quality Report',
-          sheetId: '1fnOSIWQa_mbfMHdgPatjYEIhG3kQlzPy0djHG8TOszk',
-          sheetUrl: 'https://docs.google.com/spreadsheets/d/1fnOSIWQa_mbfMHdgPatjYEIhG3kQlzPy0djHG8TOszk/',
-          tabName: 'Quality',
-          range: 'A:H16',
+          tabName: 'dashbord',
+          range: 'A:H30',
           isActive: true
         }
       ];
