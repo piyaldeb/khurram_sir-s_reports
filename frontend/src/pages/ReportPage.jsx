@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import { reportsAPI } from '../api/reports';
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { RefreshCw, Download } from 'lucide-react';
+import { RefreshCw, ExternalLink } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import dayjs from 'dayjs';
 
@@ -11,33 +10,157 @@ const reportNames = {
   budget_vs_achievement: 'Monthly Budget vs Achievement',
   stock_180: '180 Days + Stock',
   ot_report: 'OT Report',
-  production_zippers: 'Production - Zippers',
-  production_metal: 'Production - Metal',
-  quality: 'Quality Report'
+  standard_stock: 'Standard Item Stock'
 };
 
 export const ReportPage = () => {
   const { reportKey } = useParams();
   const { isAdmin } = useAuth();
-  const [data, setData] = useState(null);
+  const [screenshot, setScreenshot] = useState(null);
+  const [imageUrl, setImageUrl] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [fromDate, setFromDate] = useState('');
-  const [toDate, setToDate] = useState('');
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     loadReport();
+    return () => {
+      // Cleanup object URL on unmount or when reportKey changes
+      setImageUrl((prevUrl) => {
+        if (prevUrl && prevUrl.startsWith('blob:')) {
+          URL.revokeObjectURL(prevUrl);
+        }
+        return null;
+      });
+    };
   }, [reportKey]);
 
   const loadReport = async () => {
     try {
       setLoading(true);
+      setError(null);
+      // Cleanup old image URL
+      if (imageUrl && imageUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(imageUrl);
+        setImageUrl(null);
+      }
+      
       const response = await reportsAPI.getReport(reportKey);
-      setData(response);
+      setScreenshot(response.screenshot);
+      
+      // Load image as blob to handle authentication
+      if (response.screenshot?.driveFileId) {
+        await loadImage();
+      } else {
+        console.log('[loadReport] No screenshot found or no driveFileId');
+        setError('No screenshot uploaded yet. Please upload a screenshot through the Upload page.');
+      }
     } catch (error) {
       console.error('Error loading report:', error);
+      setError(error.response?.data?.error || error.message || 'Failed to load report');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadImage = async () => {
+    try {
+      // Use the same base URL logic as axios config
+      const baseURL = import.meta.env.VITE_API_URL || '/api';
+      const imageUrl = `${baseURL}/reports/${reportKey}/image`;
+      const token = localStorage.getItem('token');
+      
+      console.log(`[loadImage] Fetching image from: ${imageUrl}`);
+      console.log(`[loadImage] Screenshot data:`, screenshot);
+      
+      const response = await fetch(imageUrl, {
+        credentials: 'include',
+        headers: token ? {
+          'Authorization': `Bearer ${token}`
+        } : {}
+      });
+
+      console.log(`[loadImage] Response status: ${response.status}, contentType: ${response.headers.get('content-type')}`);
+
+      if (!response.ok) {
+        // Handle 401 authentication errors - redirect to login
+        if (response.status === 401) {
+          console.error(`[loadImage] Authentication failed, redirecting to login`);
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          window.location.href = '/login';
+          return;
+        }
+        
+        // Handle 404 - no screenshot uploaded
+        if (response.status === 404) {
+          console.log(`[loadImage] No screenshot found for ${reportKey}`);
+          setError('No screenshot uploaded yet. Please upload a screenshot through the Upload page.');
+          return;
+        }
+        
+        // Try to get error message from response
+        let errorMessage = 'Failed to load image';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+          console.error(`[loadImage] Error response:`, errorData);
+        } catch (e) {
+          // Response is not JSON, use status text
+          errorMessage = response.statusText || errorMessage;
+          console.error(`[loadImage] Non-JSON error response: ${response.statusText}`);
+        }
+        throw new Error(errorMessage);
+      }
+
+      // Check if response is actually an image
+      const contentType = response.headers.get('content-type');
+      console.log(`[loadImage] Content-Type: ${contentType}`);
+      
+      if (!contentType || !contentType.startsWith('image/')) {
+        // Response might be an error JSON or HTML (like Google Sign-in page)
+        const text = await response.text();
+        console.error(`[loadImage] Non-image response (first 200 chars):`, text.substring(0, 200));
+        
+        if (text.includes('Google') || text.includes('Sign in')) {
+          throw new Error('Received Google Sign-in page instead of image. The file may not be accessible. Please re-upload the screenshot.');
+        }
+        
+        try {
+          const errorData = JSON.parse(text);
+          throw new Error(errorData.error || 'Invalid response format');
+        } catch (e) {
+          throw new Error(`Expected image but got ${contentType}. Response may be an error page.`);
+        }
+      }
+
+      const blob = await response.blob();
+      console.log(`[loadImage] Blob received, size: ${blob.size}, type: ${blob.type}`);
+      
+      // Verify blob is not empty and is an image
+      if (blob.size === 0) {
+        throw new Error('Image is empty');
+      }
+      
+      // Verify it's actually an image by checking the blob type
+      if (!blob.type.startsWith('image/')) {
+        throw new Error(`Expected image blob but got ${blob.type}`);
+      }
+      
+      const url = URL.createObjectURL(blob);
+      console.log(`[loadImage] Created blob URL: ${url.substring(0, 50)}...`);
+      
+      // Cleanup old URL
+      if (imageUrl && imageUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(imageUrl);
+      }
+      
+      setImageUrl(url);
+      setError(null); // Clear any previous errors
+    } catch (error) {
+      console.error('[loadImage] Error loading image:', error);
+      setError(error.message || 'Failed to load screenshot image');
+      setImageUrl(null); // Clear image URL on error
     }
   };
 
@@ -46,42 +169,18 @@ export const ReportPage = () => {
 
     try {
       setRefreshing(true);
+      setError(null);
       await reportsAPI.refreshReports(reportKey);
-      await loadReport();
+      // Refresh button is disabled - show message instead
+      alert('Automatic screenshot capture is disabled. Please upload screenshots manually through the Upload page.\n\nGo to Upload → Select "Reports" → Choose report type → Upload your screenshot.');
     } catch (error) {
       console.error('Error refreshing report:', error);
+      const errorMessage = error.response?.data?.error || error.response?.data?.message || error.message;
+      alert(errorMessage || 'Please upload screenshots manually through the Upload page.');
     } finally {
       setRefreshing(false);
     }
   };
-
-  const downloadCSV = () => {
-    if (!data || !data.data) return;
-
-    const csvContent = [
-      data.headers.join(','),
-      ...data.data.map(row => data.headers.map(h => row[h] || '').join(','))
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${reportKey}_${dayjs().format('YYYY-MM-DD')}.csv`;
-    a.click();
-    window.URL.revokeObjectURL(url);
-  };
-
-  const filteredData = data?.data?.filter(row => {
-    if (!fromDate && !toDate) return true;
-    const dateField = data.headers?.[0];
-    if (!dateField || !row[dateField]) return true;
-
-    const rowDate = dayjs(row[dateField]);
-    if (fromDate && rowDate.isBefore(dayjs(fromDate))) return false;
-    if (toDate && rowDate.isAfter(dayjs(toDate))) return false;
-    return true;
-  }) || [];
 
   if (loading) {
     return (
@@ -97,136 +196,102 @@ export const ReportPage = () => {
         {/* Header */}
         <div className="flex justify-between items-start">
           <div>
-            <h2 className="text-3xl font-bold text-gray-900">{reportNames[reportKey]}</h2>
-            <p className="text-gray-600 mt-2">
-              Last updated: {data?.lastUpdated ? dayjs(data.lastUpdated).format('MMM D, YYYY h:mm A') : '-'}
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={downloadCSV}
-              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
-            >
-              <Download size={16} />
-              Export CSV
-            </button>
-            {isAdmin() && (
-              <button
-                onClick={handleRefresh}
-                disabled={refreshing}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-blue-300"
-              >
-                <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
-                Refresh
-              </button>
+            <h2 className="text-3xl font-bold text-gray-900">
+              {reportNames[reportKey] || reportKey}
+            </h2>
+            {screenshot?.createdAt && (
+              <p className="text-gray-600 mt-2">
+                Last updated: {dayjs(screenshot.createdAt).format('MMM D, YYYY h:mm A')}
+              </p>
             )}
           </div>
+          {isAdmin() && (
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-blue-300"
+            >
+              <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
+              Refresh
+            </button>
+          )}
         </div>
 
-        {/* Filters */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold mb-4">Filters</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">From Date</label>
-              <input
-                type="date"
-                value={fromDate}
-                onChange={(e) => setFromDate(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">To Date</label>
-              <input
-                type="date"
-                value={toDate}
-                onChange={(e) => setToDate(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Chart */}
-        {filteredData.length > 0 && (
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold mb-4">Visual Representation</h3>
-            <ResponsiveContainer width="100%" height={400}>
-              {reportKey === 'stock_180' || reportKey === 'budget_vs_achievement' ? (
-                <LineChart data={filteredData.slice(0, 20)}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey={data.headers?.[0] || 'label'} />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  {data.headers?.slice(1, 4).map((header, idx) => (
-                    <Line
-                      key={header}
-                      type="monotone"
-                      dataKey={header}
-                      stroke={['#3b82f6', '#10b981', '#f59e0b'][idx]}
-                    />
-                  ))}
-                </LineChart>
-              ) : (
-                <BarChart data={filteredData.slice(0, 20)}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey={data.headers?.[0] || 'label'} />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  {data.headers?.slice(1, 4).map((header, idx) => (
-                    <Bar
-                      key={header}
-                      dataKey={header}
-                      fill={['#3b82f6', '#10b981', '#f59e0b'][idx]}
-                    />
-                  ))}
-                </BarChart>
-              )}
-            </ResponsiveContainer>
+        {/* Error Message */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+            {error}
           </div>
         )}
 
-        {/* Table */}
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  {data?.headers?.map((header, idx) => (
-                    <th
-                      key={idx}
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                    >
-                      {header}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredData.length > 0 ? (
-                  filteredData.map((row, idx) => (
-                    <tr key={idx} className="hover:bg-gray-50">
-                      {data.headers.map((header, cellIdx) => (
-                        <td key={cellIdx} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {row[header] || '-'}
-                        </td>
-                      ))}
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={data?.headers?.length || 1} className="px-6 py-4 text-center text-gray-500">
-                      No data available
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+        {/* Screenshot Display */}
+        {screenshot ? (
+          <div className="bg-white rounded-lg shadow p-6">
+            {/* Commented out: Google Drive link - using uploaded screenshots instead */}
+            {/* {screenshot.driveFileLink ? ( */}
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-semibold">Report Screenshot</h3>
+                  {/* Commented out: Open in new tab link */}
+                  {/* <a
+                    href={screenshot.driveFileLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-blue-600 hover:text-blue-800"
+                  >
+                    <ExternalLink size={16} />
+                    Open in new tab
+                  </a> */}
+                </div>
+                <div className="border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+                  {imageUrl ? (
+                    <img
+                      src={imageUrl}
+                      alt={reportNames[reportKey] || reportKey}
+                      className="w-full h-auto"
+                      onError={(e) => {
+                        console.error('[ReportPage] Image load error:', e);
+                        e.target.style.display = 'none';
+                        setError('Failed to load screenshot image. Please try uploading again or check if the file exists.');
+                      }}
+                      onLoad={() => {
+                        console.log('[ReportPage] Image loaded successfully');
+                      }}
+                    />
+                  ) : loading ? (
+                    <div className="text-center py-12 text-gray-500">
+                      Loading image...
+                    </div>
+                  ) : (
+                    <div className="text-center py-12 text-gray-500">
+                      No image available. Please upload a screenshot.
+                    </div>
+                  )}
+                </div>
+              </div>
+            {/* ) : (
+              <div className="text-center py-12 text-gray-500">
+                Screenshot URL not available
+              </div>
+            )} */}
           </div>
-        </div>
+        ) : (
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="text-center py-12 text-gray-500">
+              No screenshot available for this report.
+              {isAdmin() && (
+                <div className="mt-4">
+                  <button
+                    onClick={handleRefresh}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                  >
+                    Capture Screenshot
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </Layout>
   );

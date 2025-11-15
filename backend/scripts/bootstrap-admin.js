@@ -109,7 +109,7 @@ async function bootstrapAdmin() {
           sheetId: '1fnOSIWQa_mbfMHdgPatjYEIhG3kQlzPy0djHG8TOszk',
           sheetUrl: 'https://docs.google.com/spreadsheets/d/1fnOSIWQa_mbfMHdgPatjYEIhG3kQlzPy0djHG8TOszk/',
           tabName: 'dashbord',
-          range: 'A:H30',
+          range: 'A1:H30',
           isActive: true
         }
       ];

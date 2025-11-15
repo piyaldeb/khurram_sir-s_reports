@@ -4,7 +4,7 @@ const dayjs = require('dayjs');
 
 exports.uploadFiles = async (req, res) => {
   try {
-    const { section, subsection, date, autoDate } = req.body;
+    const { section, subsection, uploadDate: uploadDateStr } = req.body;
 
     if (!section || !subsection) {
       return res.status(400).json({ error: 'Section and subsection are required' });
@@ -14,24 +14,49 @@ exports.uploadFiles = async (req, res) => {
       return res.status(400).json({ error: 'No files uploaded' });
     }
 
-    // Determine date: if autoDate is true, use yesterday; otherwise use provided date
-    let fileDate;
-    if (autoDate === 'true' || autoDate === true) {
-      fileDate = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    } else if (date) {
-      fileDate = new Date(date);
+    // Determine upload date and folder structure based on section type
+    let uploadDate;
+    let folderPath;
+    let monthYear;
+
+    if (section === 'quality') {
+      // Quality reports: daywise organization (default: yesterday)
+      if (uploadDateStr) {
+        uploadDate = new Date(uploadDateStr);
+      } else {
+        // Default to yesterday
+        uploadDate = new Date();
+        uploadDate.setDate(uploadDate.getDate() - 1);
+      }
+      // Format: DD-MMM-YY (e.g., "14-Nov-25")
+      const dateFolder = dayjs(uploadDate).format('DD-MMM-YY');
+      folderPath = `${dateFolder}/quality-${subsection}`;
+      monthYear = dayjs(uploadDate).format('MMMM YYYY'); // For database storage
+    } else if (section === 'reports') {
+      // Reports section: monthwise organization (format: MMM-YY)
+      uploadDate = new Date();
+      // Format: MMM-YY (e.g., "Oct-25")
+      const monthFolder = dayjs(uploadDate).format('MMM-YY');
+      folderPath = `${monthFolder}/reports/${subsection}`;
+      monthYear = dayjs(uploadDate).format('MMMM YYYY'); // For database storage
     } else {
-      fileDate = new Date();
+      // Other sections: monthwise organization (format: MMMM YYYY)
+      uploadDate = new Date();
+      monthYear = dayjs(uploadDate).format('MMMM YYYY'); // e.g., "November 2025"
+      folderPath = `${monthYear}/${section}-${subsection}`;
     }
 
     const uploadedFiles = [];
 
     for (const file of req.files) {
       try {
+        // Create filename with appropriate folder structure
+        const fileName = `${folderPath}/${file.originalname}`;
+
         // Upload to Google Drive
         const driveFile = await googleService.uploadFile(
           file.buffer,
-          file.originalname,
+          fileName,
           file.mimetype
         );
 
@@ -42,7 +67,8 @@ exports.uploadFiles = async (req, res) => {
           driveFileLink: driveFile.webViewLink,
           section,
           subsection,
-          date: fileDate,
+          date: uploadDate,
+          month: monthYear,
           uploadedBy: req.user._id
         });
 
@@ -56,7 +82,8 @@ exports.uploadFiles = async (req, res) => {
           thumbnail: googleService.getFileThumbnail(fileMeta.driveFileId),
           section: fileMeta.section,
           subsection: fileMeta.subsection,
-          date: fileMeta.date
+          date: fileMeta.date,
+          month: fileMeta.month
         });
       } catch (error) {
         console.error(`Error uploading file ${file.originalname}:`, error);

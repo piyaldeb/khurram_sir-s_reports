@@ -25,6 +25,10 @@ const fileMetaSchema = new mongoose.Schema({
     type: Date,
     required: true
   },
+  month: {
+    type: String,
+    required: true
+  },
   uploadedBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
@@ -37,7 +41,8 @@ const fileMetaSchema = new mongoose.Schema({
 });
 
 // Index for efficient queries
-fileMetaSchema.index({ section: 1, subsection: 1, date: -1 });
+fileMetaSchema.index({ section: 1, subsection: 1, month: 1, date: -1 });
+fileMetaSchema.index({ month: 1, createdAt: -1 });
 fileMetaSchema.index({ createdAt: -1 });
 
 module.exports = mongoose.model('FileMeta', fileMetaSchema);

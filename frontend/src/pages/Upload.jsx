@@ -4,17 +4,16 @@ import { sectionsAPI } from '../api/sections';
 import { uploadsAPI } from '../api/uploads';
 import { useDropzone } from 'react-dropzone';
 import { Upload as UploadIcon, X, CheckCircle } from 'lucide-react';
-import dayjs from 'dayjs';
 
 export const Upload = () => {
   const [sections, setSections] = useState([]);
   const [selectedSection, setSelectedSection] = useState('');
   const [selectedSubsection, setSelectedSubsection] = useState('');
   const [files, setFiles] = useState([]);
-  const [autoDate, setAutoDate] = useState(true);
-  const [customDate, setCustomDate] = useState(dayjs().format('YYYY-MM-DD'));
   const [uploading, setUploading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [customDate, setCustomDate] = useState('');
+  const [useCustomDate, setUseCustomDate] = useState(false);
 
   useEffect(() => {
     loadSections();
@@ -59,9 +58,13 @@ export const Upload = () => {
       const formData = new FormData();
       formData.append('section', selectedSection);
       formData.append('subsection', selectedSubsection);
-      formData.append('autoDate', autoDate);
-      if (!autoDate) {
-        formData.append('date', customDate);
+      
+      // Add date for quality reports
+      if (isQualityReport) {
+        const uploadDate = useCustomDate && customDate 
+          ? customDate 
+          : getYesterdayDate();
+        formData.append('uploadDate', uploadDate);
       }
 
       files.forEach((file) => {
@@ -82,13 +85,33 @@ export const Upload = () => {
   };
 
   const selectedSectionData = sections.find(s => s.slug === selectedSection);
+  
+  // Check if this is a quality report (daywise) or reports section (monthwise)
+  const isQualityReport = selectedSection === 'quality';
+  const isReportsSection = selectedSection === 'reports';
+  
+  // Get yesterday's date for quality reports (default)
+  const getYesterdayDate = () => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    return yesterday.toISOString().split('T')[0];
+  };
+
+  // Report keys that use monthwise organization
+  const reportKeys = ['budget_vs_achievement', 'stock_180', 'ot_report', 'standard_stock'];
 
   return (
     <Layout>
       <div className="space-y-6">
         <div>
           <h2 className="text-3xl font-bold text-gray-900">Upload Files</h2>
-          <p className="text-gray-600 mt-2">Upload photos and documents to reports</p>
+          <p className="text-gray-600 mt-2">
+            {isQualityReport 
+              ? 'Upload quality reports (organized by date)' 
+              : isReportsSection 
+              ? 'Upload report screenshots (organized by month)' 
+              : 'Upload photos and documents to reports'}
+          </p>
         </div>
 
         <div className="bg-white rounded-lg shadow p-6">
@@ -104,6 +127,8 @@ export const Upload = () => {
                   onChange={(e) => {
                     setSelectedSection(e.target.value);
                     setSelectedSubsection('');
+                    setUseCustomDate(false);
+                    setCustomDate('');
                   }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
@@ -114,64 +139,84 @@ export const Upload = () => {
                       {section.name}
                     </option>
                   ))}
+                  {/* Add reports section option */}
+                  <option value="reports">Reports</option>
                 </select>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Subsection *
+                  {isReportsSection ? 'Report Type *' : 'Subsection *'}
                 </label>
-                <select
-                  value={selectedSubsection}
-                  onChange={(e) => setSelectedSubsection(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                  disabled={!selectedSection}
-                >
-                  <option value="">Select subsection...</option>
-                  {selectedSectionData?.subsections?.map((subsection) => (
-                    <option key={subsection.slug} value={subsection.slug}>
-                      {subsection.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Date Selection */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Date
-              </label>
-              <div className="space-y-2">
-                <label className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    checked={autoDate}
-                    onChange={() => setAutoDate(true)}
-                    className="text-blue-600"
-                  />
-                  <span>Yesterday (automatic)</span>
-                </label>
-                <label className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    checked={!autoDate}
-                    onChange={() => setAutoDate(false)}
-                    className="text-blue-600"
-                  />
-                  <span>Custom date</span>
-                </label>
-                {!autoDate && (
-                  <input
-                    type="date"
-                    value={customDate}
-                    onChange={(e) => setCustomDate(e.target.value)}
+                {isReportsSection ? (
+                  <select
+                    value={selectedSubsection}
+                    onChange={(e) => setSelectedSubsection(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+                    required
+                  >
+                    <option value="">Select report type...</option>
+                    <option value="budget_vs_achievement">Budget vs Achievement</option>
+                    <option value="stock_180">180 Days Stock</option>
+                    <option value="ot_report">OT Report</option>
+                    <option value="standard_stock">Standard Item Stock</option>
+                  </select>
+                ) : (
+                  <select
+                    value={selectedSubsection}
+                    onChange={(e) => setSelectedSubsection(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                    disabled={!selectedSection}
+                  >
+                    <option value="">Select subsection...</option>
+                    {selectedSectionData?.subsections?.map((subsection) => (
+                      <option key={subsection.slug} value={subsection.slug}>
+                        {subsection.name}
+                      </option>
+                    ))}
+                  </select>
                 )}
               </div>
             </div>
+
+            {/* Date Selection for Quality Reports */}
+            {isQualityReport && (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="useCustomDate"
+                    checked={useCustomDate}
+                    onChange={(e) => {
+                      setUseCustomDate(e.target.checked);
+                      if (!e.target.checked) {
+                        setCustomDate('');
+                      }
+                    }}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <label htmlFor="useCustomDate" className="text-sm font-medium text-gray-700">
+                    Use custom date (default: yesterday)
+                  </label>
+                </div>
+                {useCustomDate && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Select Date *
+                    </label>
+                    <input
+                      type="date"
+                      value={customDate}
+                      onChange={(e) => setCustomDate(e.target.value)}
+                      max={new Date().toISOString().split('T')[0]}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      required={useCustomDate}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* File Dropzone */}
             <div>

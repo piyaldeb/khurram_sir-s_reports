@@ -19,7 +19,31 @@ export const Login = () => {
       await login(email, password);
       navigate('/dashboard');
     } catch (err) {
-      setError(err.response?.data?.error || 'Login failed');
+      console.error('Login error:', err);
+      console.error('Error details:', {
+        message: err.message,
+        code: err.code,
+        response: err.response?.data,
+        status: err.response?.status,
+        config: {
+          url: err.config?.url,
+          baseURL: err.config?.baseURL,
+          method: err.config?.method
+        }
+      });
+      
+      // Provide more helpful error messages
+      let errorMessage = 'Login failed. ';
+      if (err.code === 'ERR_NETWORK' || err.message === 'Network Error') {
+        errorMessage += 'Cannot connect to server. Please make sure the backend is running on port 5000.';
+      } else if (err.response?.data?.error) {
+        errorMessage = err.response.data.error;
+      } else if (err.message) {
+        errorMessage += err.message;
+      } else {
+        errorMessage += 'Please check your credentials and try again.';
+      }
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

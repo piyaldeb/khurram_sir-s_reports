@@ -45,7 +45,12 @@ exports.login = async (req, res) => {
     });
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ error: 'Login failed' });
+    console.error('Login error stack:', error.stack);
+    // Return more specific error message in development
+    const errorMessage = process.env.NODE_ENV === 'production' 
+      ? 'Login failed' 
+      : error.message || 'Login failed';
+    res.status(500).json({ error: errorMessage });
   }
 };
 
